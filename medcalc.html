@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Medical Nutrition Calculator</title>
+
+<style>
+  :root{
+    --blue:#0b63c6;
+    --light-blue:#eaf3ff;
+    --muted:#666;
+    --card:#fff;
+    --bg:#f6f8fb;
+    --accent:#0b63c6;
+    --table-border:#d6e6fb;
+    --radius:8px;
+  }
+
+  /* page */
+  body{
+    margin:0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--bg);
+    color:#222;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  header{
+    background:linear-gradient(90deg,var(--blue),#146fd8);
+    color:#fff;
+    padding:18px 24px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
+  }
+  header .brand{ font-weight:600; font-size:18px; }
+
+  /* layout */
+  .wrap{
+    max-width:1100px;
+    margin:18px auto;
+    padding:18px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:18px;
+  }
+
+  /* left column (form card) */
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px;
+    box-shadow:0 2px 6px rgba(12,24,48,0.06);
+  }
+
+  h1{ font-size:18px; margin:0 0 6px 0; color:#083a7a; }
+  p.lead{ margin:0 0 12px 0; color:var(--muted); font-size:13px; }
+
+  label{ display:block; font-weight:600; margin:10px 0 6px 0; font-size:13px; color:#223; }
+  .row{ display:flex; gap:8px; }
+  .col{ flex:1; }
+
+  input[type="number"], select, .small-input {
+    width:100%;
+    padding:10px 12px;
+    font-size:14px;
+    border:1px solid #d9e6fb;
+    border-radius:6px;
+    background:#fff;
+    box-sizing:border-box;
+  }
+
+  .radio-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+  .radio-row label{ font-weight:500; color:#1d355d; margin-right:8px; font-size:13px; }
+
+  .btn {
+    display:inline-block;
+    background:var(--accent);
+    color:#fff;
+    padding:11px 14px;
+    border-radius:7px;
+    border:none;
+    cursor:pointer;
+    font-weight:700;
+    margin-top:12px;
+    width:100%;
+  }
+  .btn.secondary {
+    background:#f2f6fb;
+    color:var(--accent);
+    border:1px solid #dbeefc;
+    font-weight:600;
+  }
+
+  .small-note{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+  /* results column */
+  .results {
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .summary {
+    background:linear-gradient(180deg,#fff,#fbfdff);
+    padding:14px;
+    border-radius:var(--radius);
+    border:1px solid var(--table-border);
+  }
+
+  .entered {
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    font-size:14px;
+  }
+  .entered .item { background:var(--light-blue); padding:8px 10px; border-radius:6px; font-weight:600; color:var(--blue); }
+
+  .calc-row { display:flex; gap:18px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .metric {
+    background:#fff; padding:12px; border-radius:8px; border:1px solid #eef6ff; min-width:160px;
+  }
+  .metric .label{ font-size:12px; color:var(--muted); }
+  .metric .value{ font-weight:800; font-size:20px; color:#0b63c6; margin-top:6px; }
+
+  /* tables */
+  .nutr-card{
+    background:#fff; border-radius:8px; padding:10px; border:1px solid var(--table-border);
+  }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:8px 10px; border-bottom:1px solid #f1f6fb; text-align:left; }
+  th { background:var(--blue); color:#fff; font-weight:600; font-size:13px; }
+  .small { font-size:12px; color:var(--muted); }
+
+  /* responsive */
+  @media (max-width:980px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+
+  /* helper */
+  .muted { color:var(--muted); font-size:13px; }
+  .linklike { color:var(--accent); text-decoration:underline; cursor:pointer; font-size:13px; }
+
+  /* condensed table scroll */
+  .table-wrap { max-height:320px; overflow:auto; padding-right:6px; }
+  .kbd { background:#eef6ff; padding:4px 8px; border-radius:6px; font-weight:700; color:var(--blue); }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between">
+    <div class="brand">Medical Calculator</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT: FORM -->
+    <div class="card" aria-labelledby="formHeading">
+      <h1 id="formHeading">Edit the data you entered</h1>
+      <p class="lead">Enter your details below. This computes BMI, estimated calories and shows recommended macro & micronutrient values for an adult.</p>
+
+      <label>Measurement Unit</label>
+      <div class="radio-row" role="radiogroup" aria-label="Measurement unit">
+        <label><input type="radio" name="unit" value="metric" checked> Metric</label>
+        <label><input type="radio" name="unit" value="imperial"> Imperial</label>
+      </div>
+
+      <label>Sex</label>
+      <div class="radio-row" role="radiogroup" id="sexRadios">
+        <label><input type="radio" name="sex" value="Male" checked> Male</label>
+        <label><input type="radio" name="sex" value="Female"> Female</label>
+      </div>
+
+      <label>Age</label>
+      <div class="row">
+        <input type="number" id="ageYears" class="small-input" min="0" max="120" value="" placeholder="Years">
+        <input type="number" id="ageMonths" class="small-input" min="0" max="11" value="0" placeholder="Months">
+      </div>
+
+
+
+<label>Height</label>
+<div id="heightMetric">
+  <input type="number" id="heightCm" placeholder="Centimeters (cm)" step="0.1">
+</div>
+<div id="heightImperial" style="display:none;">
+  <div class="row">
+    <div class="col"><input type="number" id="heightFeet" placeholder="Feet" min="1" max="8"></div>
+    <div class="col"><input type="number" id="heightInches" placeholder="Inches" min="0" max="11" step="0.1"></div>
+  </div>
+</div>
+
+<label>Weight</label>
+<div id="weightMetric">
+  <input type="number" id="weightKg" placeholder="Kilograms (kg)" step="0.1">
+</div>
+<div id="weightImperial" style="display:none;">
+  <input type="number" id="weightLb" placeholder="Pounds (lb)" step="0.1">
+</div>
+
+<script>
+    // ==================== AUTO METRIC / IMPERIAL CONVERSION ====================
+const $ = id => document.getElementById(id);
+
+function updateUnitDisplay(unit) {
+  $('heightMetric').style.display = unit === 'metric' ? '' : 'none';
+  $('heightImperial').style.display = unit === 'imperial' ? '' : 'none';
+  $('weightMetric').style.display = unit === 'metric' ? '' : 'none';
+  $('weightImperial').style.display = unit === 'imperial' ? '' : 'none';
+}
+
+function imperialToMetric() {
+  const ft = parseFloat($('heightFeet').value) || 0;
+  const inch = parseFloat($('heightInches').value) || 0;
+  const cm = ft * 30.48 + inch * 2.54;
+  if (cm > 0) $('heightCm').value = cm.toFixed(1);
+
+  const lb = parseFloat($('weightLb').value) || 0;
+  if (lb > 0) $('weightKg').value = (lb * 0.45359237).toFixed(1);
+}
+
+function metricToImperial() {
+  const cm = parseFloat($('heightCm').value) || 0;
+  if (cm > 0) {
+    const totalInches = cm / 2.54;
+    const feet = Math.floor(totalInches / 12);
+    const inches = (totalInches % 12).toFixed(1);
+    $('heightFeet').value = feet;
+    $('heightInches').value = inches;
+  }
+
+  const kg = parseFloat($('weightKg').value) || 0;
+  if (kg > 0) $('weightLb').value = (kg / 0.45359237).toFixed(1);
+}
+
+// Switch handling
+document.querySelectorAll('input[name="unit"]').forEach(radio => {
+  radio.addEventListener('change', e => {
+    const unit = e.target.value;
+    updateUnitDisplay(unit);
+    if (unit === 'metric') imperialToMetric();
+    else metricToImperial();
+  });
+});
+
+// Live conversion while typing
+$('heightFeet').addEventListener('input', imperialToMetric);
+$('heightInches').addEventListener('input', imperialToMetric);
+$('weightLb').addEventListener('input', imperialToMetric);
+
+$('heightCm').addEventListener('input', metricToImperial);
+$('weightKg').addEventListener('input', metricToImperial);
+
+// initial state
+updateUnitDisplay('metric');
+
+</script>
+
+
+      <label>Activity Level <span class="small muted">More information about activity</span></label>
+      <select id="activity" class="small-input">
+        <option value="" selected disabled>Select activity level</option>
+        <option value="inactive">Inactive</option>
+        <option value="low">Low Active</option>
+        <option value="active" >Active</option>
+        <option value="very">Very Active</option>
+      </select>
+      <div class="small-note">Activity level not required for children under three years in official guidance.</div>
+
+      <button class="btn" onclick="onSubmit()">Submit</button>
+      <button class="btn secondary" onclick="beginNew()" style="margin-top:8px;">Begin New Calculation</button>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results">
+      <div class="card summary" aria-live="polite">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h1 style="font-size:16px;margin:0">Your entered values:</h1>
+            <div class="entered" id="enteredValues" style="margin-top:10px">
+              <!-- dynamic chips -->
+            </div>
+            <div style="margin-top:10px">
+              <button class="btn secondary" onclick="editForm()" style="width:auto;padding:8px 12px">Edit values</button>
+            </div>
+          </div>
+
+          <div style="min-width:220px;">
+            <div class="metric">
+              <div class="label">Body Mass Index (BMI)</div>
+              <div class="value" id="bmiValue">—</div>
+            </div>
+            <div class="metric" style="margin-top:10px;">
+              <div class="label">Estimated Daily Caloric Needs</div>
+              <div class="value" id="calValue">— kcal/day</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Macronutrients -->
+      <div class="nutr-card" id="macrosCard" style="display:none;">
+        <h2 style="font-size:15px;margin:4px 0 8px 0">Daily Recommended Macronutrient Intake</h2>
+        <div class="table-wrap">
+          <table id="macroTable" aria-describedby="macros">
+            <thead>
+              <tr><th>Macronutrient</th><th>Recommended Intake Per Day</th></tr>
+            </thead>
+            <tbody>
+              <!-- dynamic -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vitamins -->
+      <div class="nutr-card" id="vitCard" style="display:none;">
+        <h2 style="font-size:15px;margin:4px 0 8px 0">Daily Recommended Vitamin Intake</h2>
+        <div class="table-wrap">
+          <table id="vitTable">
+            <thead><tr><th>Vitamin</th><th>Recommended Intake Per Day</th><th>Tolerable UL</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Minerals -->
+      <div class="nutr-card" id="minCard" style="display:none;">
+        <h2 style="font-size:15px;margin:4px 0 8px 0">Daily Recommended Essential Mineral Intake</h2>
+        <div class="table-wrap">
+          <table id="minTable">
+            <thead><tr><th>Mineral</th><th>Recommended Intake Per Day</th><th>Tolerable UL</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Non-essential minerals -->
+      <div class="nutr-card" id="nonMinCard" style="display:none;">
+        <h2 style="font-size:15px;margin:4px 0 8px 0">Daily Recommended Non-Essential Mineral Intake</h2>
+        <div class="table-wrap">
+          <table id="nonMinTable">
+            <thead><tr><th>Mineral</th><th>Recommended Intake Per Day</th><th>Tolerable UL</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="nutr-card" style="margin-top:12px;"></div>
+        <h2 style="font-size:15px;margin:4px 0 12px 0">Definitions</h2>
+        <div style="font-size:13px;line-height:1.6;color:#333;">
+          <p style="margin:8px 0;"><strong>RDA (Recommended Dietary Allowance):</strong> The average daily intake level sufficient to meet the nutrient requirement of nearly all (97-98%) healthy individuals in a particular life stage and gender group.</p>
+          <p style="margin:8px 0;"><strong>AI (Adequate Intake):</strong> Used when an RDA cannot be determined. It is set at a level assumed to ensure nutritional adequacy based on observed or experimentally-determined approximations.</p>
+          <p style="margin:8px 0;"><strong>UL (Tolerable Upper Intake Level):</strong> The highest average daily intake level likely to pose no risk of adverse health effects to almost all individuals in the general population. As intake increases above the UL, the potential risk of adverse effects increases.</p>
+          <p style="margin:8px 0;color:var(--muted);font-size:12px;">Based on National Academies of Sciences, Engineering, and Medicine DRI documentation.</p>
+        </div>
+      </div>
+        </div>
+  </div>
+</div>
+
+<script>
+  // --- Reference data (RDA/UL) for adults (example values) ---
+  // Values match the example screenshot (male adult) and include female variants where necessary.
+  const RDIs = {
+    vitamins: {
+      "Vitamin A": {M:"900 mcg",F:"700 mcg", UL:"3000 mcg"},
+      "Vitamin C": {M:"90 mg",F:"75 mg", UL:"2000 mg"},
+      "Vitamin D": {M:"15 mcg",F:"15 mcg", UL:"100 mcg"},
+      "Vitamin E": {M:"15 mg",F:"15 mg", UL:"1000 mg"},
+      "Vitamin K": {M:"120 mcg",F:"90 mcg", UL:"ND"},
+      "Thiamin (B1)": {M:"1.2 mg",F:"1.1 mg", UL:"ND"},
+      "Riboflavin (B2)": {M:"1.3 mg",F:"1.1 mg", UL:"ND"},
+      "Niacin": {M:"16 mg",F:"14 mg", UL:"35 mg"},
+      "Vitamin B6": {M:"1.3 mg",F:"1.3 mg", UL:"100 mg"},
+      "Folate": {M:"400 mcg",F:"400 mcg", UL:"1000 mcg"},
+      "Vitamin B12": {M:"2.4 mcg",F:"2.4 mcg", UL:"ND"},
+      "Choline": {M:"550 mg",F:"425 mg", UL:"3500 mg"},
+      "Biotin": {M:"30 mcg",F:"30 mcg", UL:"ND"},
+      "Carotenoids": {M:"NA",F:"NA", UL:"ND"}
+    },
+    minerals: {
+      "Calcium": {M:"1000 mg",F:"1000 mg", UL:"2500 mg"},
+      "Chloride": {M:"2300 mg",F:"2300 mg", UL:"3600 mg"},
+      "Chromium": {M:"35 mcg",F:"25 mcg", UL:"ND"},
+      "Copper": {M:"900 mcg",F:"900 mcg", UL:"10000 mcg"},
+      "Fluoride": {M:"4 mg",F:"3 mg", UL:"10 mg"},
+      "Iodine": {M:"150 mcg",F:"150 mcg", UL:"1100 mcg"},
+      "Iron": {M:"8 mg",F:"18 mg", UL:"45 mg"},
+      "Magnesium": {M:"400 mg",F:"310 mg", UL:"350 mg"},
+      "Manganese": {M:"2.3 mg",F:"1.8 mg", UL:"11 mg"},
+      "Molybdenum": {M:"45 mcg",F:"45 mcg", UL:"2000 mcg"},
+      "Phosphorus": {M:"700 mg",F:"700 mg", UL:"4000 mg"},
+      "Potassium": {M:"3400 mg",F:"2600 mg", UL:"ND"},
+      "Selenium": {M:"55 mcg",F:"55 mcg", UL:"400 mcg"},
+      "Sodium": {M:"1500 mg",F:"1500 mg", UL:"2300 mg"},
+      "Zinc": {M:"11 mg",F:"8 mg", UL:"40 mg"}
+    },
+    nonEssential: {
+      "Arsenic": {R:"NA", UL:"ND"},
+      "Boron": {R:"0 mg", UL:"20 mg"},
+      "Nickel": {R:"0 mg", UL:"1 mg"},
+      "Silicon": {R:"NA", UL:"ND"},
+      "Sulfate": {R:"NA", UL:"ND"},
+      "Vanadium": {R:"0 mg", UL:"1.8 mg"}
+    }
+  };
+
+  // --- Helpers ---
+  // helpers are declared earlier in the page; do not redeclare $ or qAll here.
+
+  // show/hide metric/imperial
+  function setUnitUI(unit){
+    document.getElementById('heightMetric').style.display = unit==='metric' ? '' : 'none';
+    document.getElementById('weightMetric').style.display = unit==='metric' ? '' : 'none';
+    document.getElementById('heightImperial').style.display = unit==='imperial' ? '' : 'none';
+    document.getElementById('weightImperial').style.display = unit==='imperial' ? '' : 'none';
+  }
+
+  // bind unit radios
+  // bind unit radios
+  document.querySelectorAll('input[name="unit"]').forEach(r=>{
+    r.addEventListener('change', e=> setUnitUI(e.target.value));
+  });
+  // on submit
+  function onSubmit(){
+    // read form values
+    const unit = document.querySelector('input[name="unit"]:checked').value;
+    const sex = document.querySelector('input[name="sex"]:checked').value;
+    const years = parseInt($('ageYears').value) || 0;
+    const months = parseInt($('ageMonths').value) || 0;
+    const age = years + (months/12);
+
+    let height_cm = 0;
+    if(unit==='metric'){
+      height_cm = parseFloat($('heightCm').value) || 0;
+    } else {
+      const ft = parseInt($('heightFeet').value) || 0;
+      const inch = parseInt($('heightInches').value) || 0;
+      height_cm = ((ft*12 + inch) * 2.54);
+    }
+
+    let weight_kg = 0;
+    if(unit==='metric'){
+      weight_kg = parseFloat($('weightKg').value) || 0;
+    } else {
+      const lb = parseFloat($('weightLb').value) || 0;
+      weight_kg = lb * 0.45359237;
+    }
+
+    const activity = $('activity').value;
+
+    if(!age || !height_cm || !weight_kg){
+      alert('Please fill age, height and weight.');
+      return;
+    }
+
+    // compute BMI
+    const h_m = height_cm / 100;
+    const bmi = weight_kg / (h_m*h_m);
+
+    // BMR - Mifflin St Jeor (commonly used)
+    let bmr = 0;
+    if(sex === 'Male'){
+      bmr = 10*weight_kg + 6.25*height_cm - 5*age + 5;
+    } else {
+      bmr = 10*weight_kg + 6.25*height_cm - 5*age - 161;
+    }
+
+    // activity factors
+    const af = { inactive:1.2, low:1.375, active:1.55, very:1.725 }[activity] || 1.2;
+    const dailyCalories = Math.round(bmr * af);
+
+    // Macronutrients (AMDR style)
+    const carbs_min = Math.round((dailyCalories * 0.45) / 4);
+    const carbs_max = Math.round((dailyCalories * 0.65) / 4);
+    // Protein use 0.8 g/kg RDA (adult)
+    const protein_g = Math.round(0.8 * weight_kg);
+    const fats_min = Math.round((dailyCalories * 0.20) / 9);
+    const fats_max = Math.round((dailyCalories * 0.35) / 9);
+    const fiber = Math.round(14 * (dailyCalories/1000)); // approximate: 14g per 1000 kcal -> typical 46g for 3300 kcal
+
+    // Update entered values chips
+    const chips = $('enteredValues');
+    chips.innerHTML = '';
+    chips.appendChild(chip('Sex', sex));
+    chips.appendChild(chip('Age', `${years} years ${months} months`));
+    chips.appendChild(chip('Height', `${Math.round(height_cm)} cm`));
+    chips.appendChild(chip('Height', `${Math.floor(height_cm/2.54/12)} ft ${Math.round(height_cm/2.54)%12} in`));
+    chips.appendChild(chip('Weight', `${Math.round(weight_kg)} kg`));
+    chips.appendChild(chip('Activity level', activityLabel(activity)));
+
+    // Update metrics
+    $('bmiValue').innerText = bmi.toFixed(1);
+    $('calValue').innerText = dailyCalories.toLocaleString() + ' kcal/day';
+
+    // show macros card and populate
+    $('macrosCard').style.display = '';
+    const macroBody = $('macroTable').querySelector('tbody');
+    macroBody.innerHTML = `
+      <tr><td>Carbohydrate</td><td>${carbs_min.toLocaleString()} - ${carbs_max.toLocaleString()} g</td></tr>
+      <tr><td>Total Fiber</td><td>${fiber.toLocaleString()} g</td></tr>
+      <tr><td>Protein</td><td>${protein_g.toLocaleString()} g</td></tr>
+      <tr><td>Fat</td><td>${fats_min.toLocaleString()} - ${fats_max.toLocaleString()} g</td></tr>
+      <tr><td>Saturated fatty acids</td><td>As low as possible while consuming a nutritionally adequate diet.</td></tr>
+      <tr><td>Trans fatty acids</td><td>As low as possible while consuming a nutritionally adequate diet.</td></tr>
+      <tr><td>α-Linolenic Acid</td><td>1.6 g</td></tr>
+      <tr><td>Linoleic Acid</td><td>17 g</td></tr>
+      <tr><td>Dietary Cholesterol</td><td>As low as possible while consuming a nutritionally adequate diet.</td></tr>
+      <tr><td>Total Water</td><td>${(dailyCalories>=3300?3.7:3.7).toFixed(1)} liters (about ${(Math.round((dailyCalories>=3300?3.7:3.7)*4))} cups)</td></tr>
+    `;
+
+    // vitamins table
+    $('vitCard').style.display = '';
+    const vitBody = $('vitTable').querySelector('tbody');
+    vitBody.innerHTML = '';
+    for(const v in RDIs.vitamins){
+      const val = RDIs.vitamins[v][sex==='Male'?'M':'F'] || RDIs.vitamins[v].M;
+      const UL = RDIs.vitamins[v].UL || 'ND';
+      vitBody.insertAdjacentHTML('beforeend', `<tr><td>${v}</td><td>${val}</td><td>${UL}</td></tr>`);
+    }
+
+    // minerals table
+    $('minCard').style.display = '';
+    const minBody = $('minTable').querySelector('tbody');
+    minBody.innerHTML = '';
+    for(const m in RDIs.minerals){
+      const val = RDIs.minerals[m][sex==='Male'?'M':'F'] || RDIs.minerals[m].M;
+      const UL = RDIs.minerals[m].UL || 'ND';
+      minBody.insertAdjacentHTML('beforeend', `<tr><td>${m}</td><td>${val}</td><td>${UL}</td></tr>`);
+    }
+
+    // non-essential minerals
+    $('nonMinCard').style.display = '';
+    const nonBody = $('nonMinTable').querySelector('tbody');
+    nonBody.innerHTML = '';
+    for(const nm in RDIs.nonEssential){
+      const r = RDIs.nonEssential[nm].R;
+      const ul = RDIs.nonEssential[nm].UL;
+      nonBody.insertAdjacentHTML('beforeend', `<tr><td>${nm}</td><td>${r}</td><td>${ul}</td></tr>`);
+    }
+
+    // scroll to top of results
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function chip(title, val){
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.style.marginRight = '6px';
+    div.innerHTML = `<div style="font-size:12px;color:var(--muted);font-weight:600">${title}</div><div style="font-weight:700">${val}</div>`;
+    return div;
+  }
+
+  function activityLabel(v){
+    if(v==='inactive') return 'Inactive';
+    if(v==='low') return 'Low Active';
+    if(v==='active') return 'Active';
+    if(v==='very') return 'Very Active';
+    return v;
+  }
+
+  function editForm(){
+    const formPos = document.querySelector('.card');
+    formPos.scrollIntoView({behavior:'smooth'});
+  }
+
+  function beginNew(){
+    // reset inputs to defaults
+    document.querySelector('input[name="unit"][value="metric"]').checked = true;
+    setUnitUI('metric');
+    document.querySelector('input[name="sex"][value="Male"]').checked = true;
+    $('ageYears').value = '';
+    $('ageMonths').value = '';
+    $('heightCm').value = '';
+    $('weightKg').value = '';
+    $('activity').value = '';
+    
+    // clear imperial inputs
+    $('weightLb').value = '';
+    $('heightFeet').value = '';
+    $('heightInches').value = '';
+
+    // hide results cards
+    ['macrosCard','vitCard','minCard','nonMinCard'].forEach(id=>$(id).style.display='none');
+    $('enteredValues').innerHTML = '';
+    $('bmiValue').innerText = '—';
+    $('calValue').innerText = '— kcal/day';
+    
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  // initialize
+  setUnitUI('metric');
+</script>
+
+</body>
+</html>
